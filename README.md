@@ -264,10 +264,60 @@ If you're routing a custom domain through Workers, swap that domain in instead.
 
 ## Customization
 
-- **Wiki conventions** — edit `workers/prompts/wiki.md`. This is the single biggest knob; the agent's behaviour follows from this prompt.
-- **Model** — change `MODEL` in `workers/agent.ts`. Anything in the [Workers AI catalog](https://developers.cloudflare.com/workers-ai/models/) works; multimodal is needed if you want photo ingestion.
-- **Wikilink resolution** — `workers/utils/wikilinks.ts` decides what `[[Foo]]` resolves to. Default tries: `Foo.md`, kebab-cased, `topics/foo.md`.
-- **Bot commands** — `handleTurn` in `workers/turn.ts` dispatches `/start` and `/clear`. Add your own there.
+### The system prompt — your biggest knob
+
+The agent's entire behaviour follows from a single markdown file:
+
+```
+workers/prompts/wiki.md
+```
+
+This is plain prose. Edit it like any document. It's pulled into the worker bundle at build time via Vite's `?raw` import (`workers/agent.ts`), and `MyAgent.getSystemPrompt()` returns it with the current UTC time appended.
+
+What you can change here:
+
+- **Directory layout** — where drops go, where topics live, what `index.md` and `log.md` look like. The current scheme is Karpathy-style (`drops/YYYY/MM/...`, `topics/...`, root-level `index.md` + `log.md`).
+- **Drop format** — what frontmatter fields each drop has, whether `## Links` is mandatory, what kinds you classify (`link` / `thought` / `image` / `snippet` / your own).
+- **Linking discipline** — how aggressively to use `[[wikilinks]]`, when to promote a ghost link to a real topic page (currently: ≥2 drops on the same theme).
+- **Tone** — the agent's reply style in Telegram (currently terse, one-sentence acknowledgements).
+- **Per-domain wikis** — repurpose this entirely for research notes, reading companion, business CRM, etc. by rewriting the prompt's "you are the keeper of…" framing.
+
+### Iteration loop for the prompt
+
+The system prompt is iterative. Expect to tweak it many times based on observed agent behaviour. The cycle:
+
+```bash
+# 1. Edit the prompt
+$EDITOR workers/prompts/wiki.md
+
+# 2. Wipe local state so the agent starts fresh under the new prompt
+npm run reset:db
+
+# 3. Restart dev (it's reading the prompt out of the build, not at runtime,
+#    so the dev server's hot-reload picks up changes on .md edits)
+npm run dev
+
+# 4. /clear in Telegram to reset conversation history, then drop a few
+#    test items and watch what the agent does
+
+# 5. When happy, commit and deploy
+git add workers/prompts/wiki.md
+git commit -m "tune: <whatever you tightened>"
+npm run deploy:production
+```
+
+The bundled prompt size shows up in `npm run build` output — if you find yourself writing pages of prose, consider that the agent has to read the full prompt every turn (token cost adds up).
+
+### Other knobs
+
+- **Model** — `MODEL` constant in `workers/agent.ts`. Anything in the [Workers AI catalog](https://developers.cloudflare.com/workers-ai/models/) works; multimodal is needed if you want photo ingestion (current default `@cf/moonshotai/kimi-k2.6` is multimodal).
+- **Wikilink resolution** — `workers/utils/wikilinks.ts` decides what `[[Foo Bar]]` resolves to. Default tries: `Foo Bar.md`, `foo-bar.md`, `topics/foo-bar.md`. Adjust if your filename conventions differ.
+- **Bot commands** — `handleTurn` in `workers/turn.ts` dispatches `/start` and `/clear`. Add your own there. If you change the command list, also update the `setMyCommands` call in `scripts/setup.mjs` (or run it manually).
+- **`/start` welcome message** — string literal in `workers/turn.ts`'s `handleTurn` (look for `cmd === "/start"`).
+- **Mini App theme** — `app/app.css` re-exports Telegram's `--tg-theme-*` CSS vars as Tailwind tokens (`bg`, `fg`, `hint`, `link`, …). Override the fallbacks if you want different colors when opened outside Telegram.
+- **Markdown styling** — `.markdown` rules in `app/app.css` (h1-h6, p, ul/ol, code/pre, blockquote, img, hr).
+- **Folder tree default-open behavior** — `FolderRow` in `app/components/FolderTree.tsx` has `useState(true)` for initial expansion. Flip to `false` to default-collapse, or write logic that opens only top-level folders.
+- **Image storage location** — `handleImageTurn` in `workers/turn.ts` writes to `drops/images/<hash>.<ext>`. Change the path template there if you want a different convention. Keep it consistent with what the system prompt says.
 
 ## Known gaps
 
