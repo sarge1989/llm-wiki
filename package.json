@@ -1,0 +1,22 @@
+{
+  "name": "llm-wiki",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/shell": "^0.3.6",
+    "@cloudflare/think": "^0.5.0",
+    "agents": "^0.12.0",
+    "ai": "^6.0.172",
+    "workers-ai-provider": "^3.1.13",
+    "zod": "^4.4.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "wrangler": "^4.0.0"
+  }
+}
