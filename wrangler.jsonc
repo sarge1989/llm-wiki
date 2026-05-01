@@ -41,4 +41,18 @@
       "binding": "LOADER",
     },
   ],
+  "env": {
+    "production": {
+      "name": "llm-wiki",
+      "vars": {
+        "ENVIRONMENT": "production",
+      },
+      "r2_buckets": [
+        {
+          "bucket_name": "llm-wiki-workspace",
+          "binding": "llm_wiki_workspace",
+        },
+      ],
+    },
+  },
 }

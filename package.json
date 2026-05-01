@@ -6,6 +6,8 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "deploy": "npm run build && wrangler deploy",
+    "deploy:staging": "CLOUDFLARE_ENV=staging npm run build && wrangler deploy",
+    "deploy:production": "CLOUDFLARE_ENV=production npm run build && wrangler deploy",
     "cf-typegen": "wrangler types",
     "typecheck": "react-router typegen && tsc -b",
     "reset:db": "lsof -i :8421 -t 2>/dev/null | xargs -r kill -9 2>/dev/null; rm -rf .wrangler && echo '✓ Local DO storage + R2 simulator wiped. Run npm run dev to restart.'"
