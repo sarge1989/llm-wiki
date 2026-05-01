@@ -72,6 +72,31 @@ app/
 
 `wrangler` (Cloudflare's CLI) is included as a devDependency, so `npm install` covers it — you don't need a global install. All `wrangler ...` commands below should be run as `npx wrangler ...` so they pick up the project-local version.
 
+### Quick path: `npm run setup`
+
+```bash
+git clone <your-fork>
+cd llm-wiki
+npm install
+npm run setup
+```
+
+The setup script walks you through:
+
+1. `wrangler login` (if needed)
+2. Pasting your Telegram bot token (from @BotFather) — verifies it via `getMe`
+3. Pasting your Telegram user ID (from @userinfobot)
+4. Generating a webhook secret
+5. Writing `.dev.vars` for local dev
+6. Creating the R2 bucket (idempotent)
+7. Pushing all secrets to the worker
+8. `npm run build` + `wrangler deploy`
+9. Registering the Telegram webhook + Mini App menu button + bot commands
+
+It's idempotent — safe to re-run. At the end you get the deployed worker URL; DM your bot, tap the menu button, you're live.
+
+The manual steps below are for if you prefer to do it yourself, or if the setup script bails partway and you want to finish individual pieces.
+
 ### 1. Clone + install
 
 ```bash
@@ -254,6 +279,7 @@ If you're routing a custom domain through Workers, swap that domain in instead.
 ## Scripts
 
 ```
+npm run setup       # interactive first-time setup: auth, bot token, deploy, webhook
 npm run dev         # Vite + workerd dev server on :8421
 npm run build       # react-router build (client + SSR bundles)
 npm run deploy      # build + wrangler deploy
