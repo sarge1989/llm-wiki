@@ -59,6 +59,82 @@ function pushSecret(name, value) {
   }
 }
 
+function checkPreflight() {
+  log("─ Preflight checks ─────────────────────────────────────────────");
+
+  // Node version — we use built-in fetch, readline/promises, base64url.
+  const nodeVer = process.versions.node;
+  const major = Number.parseInt(nodeVer.split(".")[0], 10);
+  if (Number.isNaN(major) || major < 20) {
+    fail(
+      `Node.js ${nodeVer} detected — need ≥ 20.\n` +
+        `  Upgrade with: brew install node@20  (macOS)\n` +
+        `  Or download:  https://nodejs.org/`,
+    );
+  }
+  log(`  ✓ Node.js v${nodeVer}`);
+
+  // Repo deps installed.
+  if (!existsSync("node_modules")) {
+    fail("node_modules/ not found. Run `npm install` first, then re-run setup.");
+  }
+
+  // wrangler is available + reasonably modern. Output format has changed
+  // between versions ("⛅️ wrangler 4.87.0" vs just "4.87.0") — match any
+  // semver-looking sequence on the first line.
+  let wranglerOut;
+  try {
+    wranglerOut = capture("npx", ["wrangler", "--version"]).trim();
+  } catch {
+    fail("Couldn't run wrangler. Try `npm install` and re-run.");
+  }
+  const semverMatch = wranglerOut.match(/(\d+)\.(\d+)\.(\d+)/);
+  if (!semverMatch) {
+    fail(`Couldn't parse wrangler version from output:\n${wranglerOut}`);
+  }
+  const wranglerMajor = Number.parseInt(semverMatch[1], 10);
+  if (wranglerMajor < 4) {
+    fail(
+      `Old wrangler detected (${semverMatch[0]}) — need ≥ 4.x. Run \`npm install -D wrangler@latest\`.`,
+    );
+  }
+  log(`  ✓ wrangler ${semverMatch[0]}`);
+
+  // git available — we don't strictly use it, but we want the user to be in
+  // a working repo (they cloned, after all). Cheap check, gives a friendly
+  // error if they ran setup from the wrong directory.
+  if (!existsSync("wrangler.jsonc") || !existsSync("workers/app.ts")) {
+    fail(
+      "Run setup from the llm-wiki repo root.\n" +
+        "  Expected to find ./wrangler.jsonc and ./workers/app.ts here.",
+    );
+  }
+  log(`  ✓ Repo layout looks correct\n`);
+}
+
+async function confirmPaidPlan() {
+  log("─ Cloudflare account requirements ─────────────────────────────");
+  log("  This setup uses several features that require the Workers Paid");
+  log("  plan ($5/mo). Confirm your account is on Workers Paid before");
+  log("  continuing — otherwise the deploy will fail with a binding error.");
+  log("");
+  log("  Required:");
+  log("    • Workers Paid     — https://dash.cloudflare.com/?to=/:account/workers/plans");
+  log("    • Workers AI       — usage-billed, pennies for personal use");
+  log("    • Browser Rendering — used for URL-drop scraping");
+  log("    • Worker Loaders   — used by @cloudflare/codemode");
+  log("    • R2               — has free tier; idea-dump usage well within it");
+  log("");
+  const answer = (await ask("  Are you on Workers Paid? (y/N): ")).trim().toLowerCase();
+  if (answer !== "y" && answer !== "yes") {
+    log("");
+    log("  Setup paused. Subscribe to Workers Paid, then re-run `npm run setup`.");
+    rl.close();
+    exit(0);
+  }
+  log("");
+}
+
 async function tg(token, method, body) {
   const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
     method: "POST",
@@ -79,6 +155,9 @@ async function main() {
   log("  • Register the webhook + Mini App menu button");
   log("");
   log("Stop with Ctrl+C any time. Re-running is safe — every step is idempotent.\n");
+
+  checkPreflight();
+  await confirmPaidPlan();
 
   // ── 1. Wrangler auth ────────────────────────────────────────────────────
   log("─ Step 1/6: Cloudflare authentication ─────────────────────────────");
