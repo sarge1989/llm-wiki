@@ -1,11 +1,15 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "llm-wiki",
-  "main": "src/server.ts",
+  "main": "./workers/app.ts",
   "compatibility_date": "2026-04-30",
   "compatibility_flags": ["nodejs_compat"],
-  "observability": { "enabled": true },
-  "dev": { "port": 8421 },
+  "observability": {
+    "enabled": true,
+  },
+  "dev": {
+    "port": 8421,
+  },
   "ai": {
     "binding": "AI",
   },
@@ -21,6 +25,20 @@
     {
       "new_sqlite_classes": ["MyAgent"],
       "tag": "v1",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "bucket_name": "llm-wiki-workspace",
+      "binding": "llm_wiki_workspace",
+    },
+  ],
+  "browser": {
+    "binding": "BROWSER",
+  },
+  "worker_loaders": [
+    {
+      "binding": "LOADER",
     },
   ],
 }

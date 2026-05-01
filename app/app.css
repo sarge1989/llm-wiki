@@ -1,0 +1,207 @@
+@import "tailwindcss";
+
+/*
+ * Telegram Mini App theme bridge.
+ * Telegram injects --tg-theme-* CSS vars on the document root, switching with
+ * the user's light/dark mode automatically. We re-export them as semantic
+ * Tailwind theme tokens (bg / fg / hint / link / button / secondary-bg) so
+ * components can use class names like `bg-bg text-fg` without inlining vars.
+ */
+@theme inline {
+  --color-bg: var(--tg-theme-bg-color, #ffffff);
+  --color-fg: var(--tg-theme-text-color, #000000);
+  --color-hint: var(--tg-theme-hint-color, #707579);
+  --color-link: var(--tg-theme-link-color, #2481cc);
+  --color-button: var(--tg-theme-button-color, #2481cc);
+  --color-button-fg: var(--tg-theme-button-text-color, #ffffff);
+  --color-secondary-bg: var(--tg-theme-secondary-bg-color, #f4f4f5);
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+/*
+ * Markdown rendering styles. Applied to `<article class="markdown">` wrapping
+ * marked()-rendered HTML on /wiki pages.
+ */
+.markdown h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.75rem;
+}
+.markdown h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+}
+.markdown h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+}
+.markdown p {
+  margin: 0.75rem 0;
+  line-height: 1.6;
+}
+.markdown ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+}
+.markdown ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+}
+.markdown li {
+  margin: 0.25rem 0;
+}
+.markdown a {
+  color: var(--color-link);
+  text-decoration: underline;
+}
+.markdown code {
+  background: var(--color-secondary-bg);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.markdown pre {
+  background: var(--color-secondary-bg);
+  padding: 0.75rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+.markdown pre code {
+  background: transparent;
+  padding: 0;
+}
+.markdown blockquote {
+  border-left: 2px solid var(--color-hint);
+  padding-left: 0.75rem;
+  margin: 0.75rem 0;
+  color: var(--color-hint);
+}
+.markdown img {
+  max-width: 100%;
+  border-radius: 4px;
+  margin: 0.75rem 0;
+}
+.markdown hr {
+  border: 0;
+  border-top: 1px solid var(--color-hint);
+  opacity: 0.3;
+  margin: 1.5rem 0;
+}
+.wikilink-broken {
+  color: var(--color-hint);
+  font-style: italic;
+}
+
+/*
+ * Frontmatter metadata block on wiki pages — rendered above the markdown body
+ * as a key/value grid. Keys are uppercased small-caps in hint color; values
+ * wrap freely. Background uses Telegram's secondary-bg theme color so it's
+ * subtle against both light and dark.
+ */
+.markdown-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  font-size: 0.85rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: var(--color-secondary-bg);
+  margin: 1rem 0 1.5rem;
+}
+.markdown-meta dt {
+  color: var(--color-hint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+  font-weight: 500;
+  align-self: center;
+}
+.markdown-meta dd {
+  margin: 0;
+  word-break: break-word;
+}
+.markdown-meta dd a {
+  color: var(--color-link);
+}
+
+/*
+ * Obsidian-style folder tree on the home page. Uses bullets-stripped <ul>s
+ * with explicit indentation per nesting level, a chevron on folder rows,
+ * and file names stripped of their .md extension.
+ */
+.folder-tree {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.folder-children {
+  padding-left: 16px;
+}
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 4px;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--color-fg);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.folder-row:hover {
+  background: var(--color-secondary-bg);
+}
+.folder-caret {
+  display: inline-block;
+  width: 10px;
+  font-size: 0.7rem;
+  color: var(--color-hint);
+  flex-shrink: 0;
+}
+.folder-name {
+  font-weight: 500;
+}
+.folder-count {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--color-hint);
+  font-variant-numeric: tabular-nums;
+}
+.file-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 4px;
+  font-size: 0.9rem;
+  color: var(--color-link);
+  text-decoration: none;
+  border-radius: 4px;
+}
+.file-row:hover {
+  background: var(--color-secondary-bg);
+}
+.file-spacer {
+  display: inline-block;
+  width: 10px;
+  flex-shrink: 0;
+}
+.file-name {
+  word-break: break-all;
+}
