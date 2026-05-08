@@ -5,6 +5,7 @@ import {
   getTelegramFile,
   sendMessage,
   sendMessageDraft,
+  withTyping,
 } from "./telegram";
 
 const DRAFT_THROTTLE_MS = 800;
@@ -69,35 +70,37 @@ export async function handleTurn(
   draftId: number,
   text: string,
 ): Promise<void> {
-  try {
-    if (text.startsWith("/")) {
-      const cmd = text.split(/[\s@]/)[0].toLowerCase();
-      if (cmd === "/start") {
-        await sendMessage(
-          env.TELEGRAM_BOT_TOKEN,
-          chatId,
-          "Send me a message to start talking to the agent. /clear to reset our conversation.",
-        );
-        return;
+  await withTyping(env.TELEGRAM_BOT_TOKEN, chatId, async () => {
+    try {
+      if (text.startsWith("/")) {
+        const cmd = text.split(/[\s@]/)[0].toLowerCase();
+        if (cmd === "/start") {
+          await sendMessage(
+            env.TELEGRAM_BOT_TOKEN,
+            chatId,
+            "Send me a message to start talking to the agent. /clear to reset our conversation.",
+          );
+          return;
+        }
+        if (cmd === "/clear") {
+          const agent = await getAgentByName(env.MyAgent, String(chatId));
+          await agent.clearMessages();
+          await sendMessage(env.TELEGRAM_BOT_TOKEN, chatId, "Cleared. Fresh start.");
+          return;
+        }
       }
-      if (cmd === "/clear") {
-        const agent = await getAgentByName(env.MyAgent, String(chatId));
-        await agent.clearMessages();
-        await sendMessage(env.TELEGRAM_BOT_TOKEN, chatId, "Cleared. Fresh start.");
-        return;
-      }
-    }
 
-    const sink = new TelegramDraftSink(env.TELEGRAM_BOT_TOKEN, chatId, draftId);
-    const agent = await getAgentByName(env.MyAgent, String(chatId));
-    await agent.chat(text, sink);
-    await sink.settle();
-    await sendMessage(env.TELEGRAM_BOT_TOKEN, chatId, sink.text || "(empty reply)");
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
-    console.error("turn failed:", err);
-    await sendMessage(env.TELEGRAM_BOT_TOKEN, chatId, `⚠️ ${detail}`);
-  }
+      const sink = new TelegramDraftSink(env.TELEGRAM_BOT_TOKEN, chatId, draftId);
+      const agent = await getAgentByName(env.MyAgent, String(chatId));
+      await agent.chat(text, sink);
+      await sink.settle();
+      await sendMessage(env.TELEGRAM_BOT_TOKEN, chatId, sink.text || "(empty reply)");
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error("turn failed:", err);
+      await sendMessage(env.TELEGRAM_BOT_TOKEN, chatId, `⚠️ ${detail}`);
+    }
+  });
 }
 
 /**
@@ -112,7 +115,8 @@ export async function handleImageTurn(
   fileId: string,
   caption: string,
 ): Promise<void> {
-  try {
+  await withTyping(env.TELEGRAM_BOT_TOKEN, chatId, async () => {
+   try {
     const file = await getTelegramFile(env.TELEGRAM_BOT_TOKEN, fileId);
     if (!file) {
       await sendMessage(
@@ -157,11 +161,12 @@ export async function handleImageTurn(
     );
     await sink.settle();
     await sendMessage(env.TELEGRAM_BOT_TOKEN, chatId, sink.text || "(empty reply)");
-  } catch (err) {
+   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     console.error("image turn failed:", err);
     await sendMessage(env.TELEGRAM_BOT_TOKEN, chatId, `⚠️ ${detail}`);
-  }
+   }
+  });
 }
 
 /** btoa-friendly base64 encoder for Uint8Array, chunked to avoid stack overflow on large buffers. */

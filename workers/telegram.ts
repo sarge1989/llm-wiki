@@ -73,6 +73,49 @@ export async function sendMessageDraft(
 }
 
 /**
+ * Send a chat action ("typing…", "upload_photo", etc.). The indicator lasts
+ * up to 5 seconds or until the bot sends a message — call this on a refresh
+ * interval (see {@link withTyping}) for long-running turns.
+ */
+export async function sendChatAction(
+  token: string,
+  chatId: number,
+  action:
+    | "typing"
+    | "upload_photo"
+    | "upload_document"
+    | "upload_voice"
+    | "record_voice"
+    | "find_location"
+    | "choose_sticker",
+): Promise<void> {
+  await tg(token, "sendChatAction", { chat_id: chatId, action });
+}
+
+/**
+ * Keep a typing indicator lit in the chat until `fn` resolves. Telegram's
+ * action expires in ~5s, so we refresh every 4s. Refresh failures are logged
+ * but don't fail the turn.
+ */
+export async function withTyping<T>(
+  token: string,
+  chatId: number,
+  fn: () => Promise<T>,
+): Promise<T> {
+  await sendChatAction(token, chatId, "typing").catch(() => {});
+  const interval = setInterval(() => {
+    sendChatAction(token, chatId, "typing").catch((err) =>
+      console.error("typing refresh failed:", err),
+    );
+  }, 4000);
+  try {
+    return await fn();
+  } finally {
+    clearInterval(interval);
+  }
+}
+
+/**
  * Download a Telegram file by file_id. Returns the bytes plus a MIME type
  * inferred from the file extension.
  */
