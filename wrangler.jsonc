@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "llm-wiki",
+  "name": "bw-task-tracker-bot",
   "main": "./workers/app.ts",
   "compatibility_date": "2026-04-30",
   "compatibility_flags": ["nodejs_compat"],
@@ -29,7 +29,7 @@
   ],
   "r2_buckets": [
     {
-      "bucket_name": "llm-wiki-workspace",
+      "bucket_name": "bw-task-tracker-bot-workspace",
       "binding": "llm_wiki_workspace",
     },
   ],
@@ -44,13 +44,13 @@
   "queues": {
     "producers": [
       {
-        "queue": "llm-wiki-tasks",
+        "queue": "bw-task-tracker-bot-tasks",
         "binding": "TASK_QUEUE",
       },
     ],
     "consumers": [
       {
-        "queue": "llm-wiki-tasks",
+        "queue": "bw-task-tracker-bot-tasks",
         "max_batch_size": 1,
         "max_batch_timeout": 1,
         "max_retries": 0,
@@ -59,7 +59,7 @@
   },
   "env": {
     "production": {
-      "name": "llm-wiki",
+      "name": "bw-task-tracker-bot",
       "vars": {
         "ENVIRONMENT": "production",
       },
@@ -82,7 +82,7 @@
       ],
       "r2_buckets": [
         {
-          "bucket_name": "llm-wiki-workspace",
+          "bucket_name": "bw-task-tracker-bot-workspace",
           "binding": "llm_wiki_workspace",
         },
       ],
@@ -97,13 +97,13 @@
       "queues": {
         "producers": [
           {
-            "queue": "llm-wiki-tasks",
+            "queue": "bw-task-tracker-bot-tasks",
             "binding": "TASK_QUEUE",
           },
         ],
         "consumers": [
           {
-            "queue": "llm-wiki-tasks",
+            "queue": "bw-task-tracker-bot-tasks",
             "max_batch_size": 1,
             "max_batch_timeout": 1,
             "max_retries": 0,

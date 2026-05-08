@@ -48,7 +48,7 @@ export class MyAgent extends Think<Env> {
       // logging, caching, latency / token tracking. Create the gateway once
       // in the Cloudflare dashboard (AI Gateway → Create Gateway → name it
       // "llm-wiki"); no other code change needed once it exists.
-      gateway: { id: "llm-wiki" },
+      gateway: { id: "bw-task-tracker-bot" },
     })(MODEL);
   }
 
