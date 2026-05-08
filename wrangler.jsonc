@@ -30,7 +30,7 @@
   "r2_buckets": [
     {
       "bucket_name": "bw-task-tracker-bot-workspace",
-      "binding": "llm_wiki_workspace",
+      "binding": "WORKSPACE_R2",
     },
   ],
   "browser": {
@@ -83,7 +83,7 @@
       "r2_buckets": [
         {
           "bucket_name": "bw-task-tracker-bot-workspace",
-          "binding": "llm_wiki_workspace",
+          "binding": "WORKSPACE_R2",
         },
       ],
       "browser": {

@@ -37,7 +37,7 @@ export class MyAgent extends Think<Env> {
    */
   override workspace = new Workspace({
     sql: this.ctx.storage.sql,
-    r2: this.env.llm_wiki_workspace,
+    r2: this.env.WORKSPACE_R2,
     name: () => this.name,
   });
 
