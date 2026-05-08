@@ -11,6 +11,39 @@ import {
 const DRAFT_THROTTLE_MS = 800;
 
 /**
+ * Discriminated union of work items pushed onto the task queue from the
+ * webhook handler. The queue consumer routes on `kind` to the appropriate
+ * turn handler. Stay JSON-serializable — Cloudflare Queues use structured
+ * clone, but flat plain objects are easiest to reason about.
+ */
+export type QueueMessage =
+  | {
+      kind: "text";
+      chatId: number;
+      messageId: number;
+      text: string;
+    }
+  | {
+      kind: "image";
+      chatId: number;
+      messageId: number;
+      fileId: string;
+      caption: string;
+    };
+
+/** Queue consumer entry — dispatch on message shape, run the right turn. */
+export async function processQueueMessage(
+  env: Env,
+  msg: QueueMessage,
+): Promise<void> {
+  if (msg.kind === "text") {
+    await handleTurn(env, msg.chatId, msg.messageId, msg.text);
+  } else {
+    await handleImageTurn(env, msg.chatId, msg.messageId, msg.fileId, msg.caption);
+  }
+}
+
+/**
  * RpcTarget passed to `agent.chat()`. Methods are invoked from the agent DO
  * via RPC; mutable fields stay local to the worker side.
  *

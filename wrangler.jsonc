@@ -41,18 +41,75 @@
       "binding": "LOADER",
     },
   ],
+  "queues": {
+    "producers": [
+      {
+        "queue": "llm-wiki-tasks",
+        "binding": "TASK_QUEUE",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "llm-wiki-tasks",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_retries": 0,
+      },
+    ],
+  },
   "env": {
     "production": {
       "name": "llm-wiki",
       "vars": {
         "ENVIRONMENT": "production",
       },
+      "ai": {
+        "binding": "AI",
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "class_name": "MyAgent",
+            "name": "MyAgent",
+          },
+        ],
+      },
+      "migrations": [
+        {
+          "new_sqlite_classes": ["MyAgent"],
+          "tag": "v1",
+        },
+      ],
       "r2_buckets": [
         {
           "bucket_name": "llm-wiki-workspace",
           "binding": "llm_wiki_workspace",
         },
       ],
+      "browser": {
+        "binding": "BROWSER",
+      },
+      "worker_loaders": [
+        {
+          "binding": "LOADER",
+        },
+      ],
+      "queues": {
+        "producers": [
+          {
+            "queue": "llm-wiki-tasks",
+            "binding": "TASK_QUEUE",
+          },
+        ],
+        "consumers": [
+          {
+            "queue": "llm-wiki-tasks",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_retries": 0,
+          },
+        ],
+      },
     },
   },
 }

@@ -235,6 +235,18 @@ async function main() {
     }
   }
 
+  log("  Creating queue llm-wiki-tasks…");
+  try {
+    capture("npx", ["wrangler", "queues", "create", "llm-wiki-tasks"]);
+    log("  ✓ Queue created");
+  } catch (e) {
+    if (/already exists/i.test(e.stderr || "") || /already exists/i.test(e.message)) {
+      log("  ✓ Queue already exists");
+    } else {
+      fail(`Queue creation failed: ${e.message}`);
+    }
+  }
+
   log("  Building + deploying worker…");
   let deployStdout;
   try {
