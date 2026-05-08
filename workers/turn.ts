@@ -131,7 +131,7 @@ export async function handleImageTurn(
       .slice(0, 6)
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
-    const wsPath = `drops/images/${hash}.${file.ext}`;
+    const wsPath = `tasks/images/${hash}.${file.ext}`;
 
     const sink = new TelegramDraftSink(env.TELEGRAM_BOT_TOKEN, chatId, draftId);
     const agent = await getAgentByName(env.MyAgent, String(chatId));
