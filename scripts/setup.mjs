@@ -18,7 +18,63 @@ import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout, exit } from "node:process";
 import { randomBytes } from "node:crypto";
-import { writeFileSync, existsSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync } from "node:fs";
+
+const DEFAULT_SLUG = "llm-wiki";
+const WRANGLER_PATH = "wrangler.jsonc";
+const AGENT_PATH = "workers/agent.ts";
+
+/**
+ * Cloudflare resource names are account-scoped, so two deployments of this
+ * repo into the same account must use different worker / R2 / queue names.
+ * Derive a slug from the bot's @username — unique within the user's
+ * Telegram account, sanitized to Cloudflare's lowercase-kebab convention.
+ */
+function slugFromUsername(username) {
+  return username
+    .toLowerCase()
+    .replace(/_/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Idempotent text find-and-replace across wrangler.jsonc + workers/agent.ts.
+ * The default strings are unique enough that a parser-free replaceAll is
+ * safe. If `currentSlug` isn't in the files (already substituted), no-op.
+ */
+function applySlug(currentSlug, newSlug) {
+  if (currentSlug === newSlug) return false;
+
+  const wranglerBefore = readFileSync(WRANGLER_PATH, "utf8");
+  const wranglerAfter = wranglerBefore
+    .replaceAll(`"name": "${currentSlug}"`, `"name": "${newSlug}"`)
+    .replaceAll(
+      `"bucket_name": "${currentSlug}-workspace"`,
+      `"bucket_name": "${newSlug}-workspace"`,
+    )
+    .replaceAll(
+      `"queue": "${currentSlug}-tasks"`,
+      `"queue": "${newSlug}-tasks"`,
+    );
+  if (wranglerBefore !== wranglerAfter) writeFileSync(WRANGLER_PATH, wranglerAfter);
+
+  const agentBefore = readFileSync(AGENT_PATH, "utf8");
+  const agentAfter = agentBefore.replaceAll(
+    `id: "${currentSlug}"`,
+    `id: "${newSlug}"`,
+  );
+  if (agentBefore !== agentAfter) writeFileSync(AGENT_PATH, agentAfter);
+
+  return wranglerBefore !== wranglerAfter || agentBefore !== agentAfter;
+}
+
+/** Read the current worker name from wrangler.jsonc to detect prior substitution. */
+function currentSlug() {
+  const m = readFileSync(WRANGLER_PATH, "utf8").match(/"name":\s*"([^"]+)"/);
+  return m?.[1] ?? DEFAULT_SLUG;
+}
 
 const rl = createInterface({ input: stdin, output: stdout });
 const ask = (q) => rl.question(q);
@@ -192,6 +248,44 @@ async function main() {
   }
   log(`  ✓ Bot: @${bot.username} (${bot.first_name})\n`);
 
+  // ── 2b. Resource naming ────────────────────────────────────────────────
+  log("─ Resource naming ─────────────────────────────────────────────");
+  const proposedSlug = slugFromUsername(bot.username);
+  const existingSlug = currentSlug();
+  let slug = existingSlug;
+
+  if (existingSlug === proposedSlug) {
+    log(`  ✓ Already scoped to "${slug}".\n`);
+  } else if (existingSlug !== DEFAULT_SLUG) {
+    log(
+      `  ⚠ wrangler.jsonc already uses "${existingSlug}" (custom slug). Keeping it.\n`,
+    );
+  } else {
+    log(`  Cloudflare resource names are account-scoped. To support multiple`);
+    log(`  forks of this repo on the same Cloudflare account, scope the`);
+    log(`  worker / R2 bucket / queue / AI Gateway names to your bot.`);
+    log("");
+    log(`    Worker:      ${proposedSlug}`);
+    log(`    R2 bucket:   ${proposedSlug}-workspace`);
+    log(`    Queue:       ${proposedSlug}-tasks`);
+    log(`    AI Gateway:  ${proposedSlug}`);
+    log("");
+    log(`  ⚠ If you've already deployed under "${existingSlug}", this creates`);
+    log(`    a new worker and orphans the old one (its R2, queue, gateway`);
+    log(`    logs, secrets stay attached to the old name).`);
+    log("");
+    const ans = (await ask(`  Apply slug "${proposedSlug}"? (Y/n): `))
+      .trim()
+      .toLowerCase();
+    if (ans === "n" || ans === "no") {
+      log(`  Keeping default slug "${DEFAULT_SLUG}".\n`);
+    } else {
+      applySlug(DEFAULT_SLUG, proposedSlug);
+      slug = proposedSlug;
+      log(`  ✓ Substituted "${DEFAULT_SLUG}" → "${slug}" in wrangler.jsonc, agent.ts\n`);
+    }
+  }
+
   // ── 3. User ID ──────────────────────────────────────────────────────────
   log("─ Step 3/6: Your Telegram user ID ─────────────────────────────────");
   log("  Open Telegram → DM @userinfobot → copy the numeric Id from its reply.");
@@ -223,9 +317,12 @@ async function main() {
   // Order matters: bucket must exist before deploy (wrangler.jsonc references
   // it as a binding); worker must exist before `secret put` works.
   log("─ Step 5/6: Cloudflare resources ─────────────────────────────────");
-  log("  Creating R2 bucket llm-wiki-workspace…");
+  const bucketName = `${slug}-workspace`;
+  const queueName = `${slug}-tasks`;
+
+  log(`  Creating R2 bucket ${bucketName}…`);
   try {
-    capture("npx", ["wrangler", "r2", "bucket", "create", "llm-wiki-workspace"]);
+    capture("npx", ["wrangler", "r2", "bucket", "create", bucketName]);
     log("  ✓ Bucket created");
   } catch (e) {
     if (/already exists/i.test(e.stderr || "") || /already exists/i.test(e.message)) {
@@ -235,9 +332,9 @@ async function main() {
     }
   }
 
-  log("  Creating queue llm-wiki-tasks…");
+  log(`  Creating queue ${queueName}…`);
   try {
-    capture("npx", ["wrangler", "queues", "create", "llm-wiki-tasks"]);
+    capture("npx", ["wrangler", "queues", "create", queueName]);
     log("  ✓ Queue created");
   } catch (e) {
     if (/already exists/i.test(e.stderr || "") || /already exists/i.test(e.message)) {
@@ -325,6 +422,10 @@ async function main() {
   log(`  Bot:     @${bot.username}`);
   log(`  Worker:  ${workerUrl}`);
   log(`  Wiki:    ${workerUrl}/`);
+  log("");
+  log(`  ⚠ One manual step left: create the AI Gateway in your dashboard.`);
+  log(`     Cloudflare → AI → AI Gateway → Create Gateway → name: "${slug}"`);
+  log(`     (Without it, model calls will fail at runtime.)`);
   log("");
   log(`  → DM @${bot.username} on Telegram and tap the "Open Wiki" menu button.`);
   log(`  → Drop a thought, link, or photo. The agent will file it.`);
