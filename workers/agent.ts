@@ -42,7 +42,14 @@ export class MyAgent extends Think<Env> {
   });
 
   getModel() {
-    return createWorkersAI({ binding: this.env.AI })(MODEL);
+    return createWorkersAI({
+      binding: this.env.AI,
+      // Route Workers AI calls through Cloudflare AI Gateway for per-request
+      // logging, caching, latency / token tracking. Create the gateway once
+      // in the Cloudflare dashboard (AI Gateway → Create Gateway → name it
+      // "llm-wiki"); no other code change needed once it exists.
+      gateway: { id: "llm-wiki" },
+    })(MODEL);
   }
 
   /**
