@@ -256,33 +256,36 @@ async function main() {
 
   if (existingSlug === proposedSlug) {
     log(`  ✓ Already scoped to "${slug}".\n`);
-  } else if (existingSlug !== DEFAULT_SLUG) {
-    log(
-      `  ⚠ wrangler.jsonc already uses "${existingSlug}" (custom slug). Keeping it.\n`,
-    );
   } else {
-    log(`  Cloudflare resource names are account-scoped. To support multiple`);
-    log(`  forks of this repo on the same Cloudflare account, scope the`);
-    log(`  worker / R2 bucket / queue / AI Gateway names to your bot.`);
+    // Mismatch — could be the original "llm-wiki" placeholder, or someone
+    // else's slug we picked up by cloning their fork. Either way, ask.
+    log(`  Cloudflare resource names are account-scoped. The deployment`);
+    log(`  worker / R2 bucket / queue / AI Gateway must have unique names`);
+    log(`  across this account.`);
     log("");
+    log(`    Currently in wrangler.jsonc:  ${existingSlug}`);
+    log(`    Derived from your bot:        ${proposedSlug}`);
+    log("");
+    log(`  Apply your bot's slug:`);
     log(`    Worker:      ${proposedSlug}`);
     log(`    R2 bucket:   ${proposedSlug}-workspace`);
     log(`    Queue:       ${proposedSlug}-tasks`);
     log(`    AI Gateway:  ${proposedSlug}`);
     log("");
-    log(`  ⚠ If you've already deployed under "${existingSlug}", this creates`);
-    log(`    a new worker and orphans the old one (its R2, queue, gateway`);
-    log(`    logs, secrets stay attached to the old name).`);
+    log(`  ⚠ If you've already deployed under "${existingSlug}", renaming`);
+    log(`    creates a new worker and orphans the old one (its R2, queue,`);
+    log(`    gateway logs, secrets stay attached to the old name).`);
     log("");
-    const ans = (await ask(`  Apply slug "${proposedSlug}"? (Y/n): `))
+    const ans = (await ask(`  Rename "${existingSlug}" → "${proposedSlug}"? (Y/n): `))
       .trim()
       .toLowerCase();
     if (ans === "n" || ans === "no") {
-      log(`  Keeping default slug "${DEFAULT_SLUG}".\n`);
+      log(`  Keeping current slug "${existingSlug}". Resource creation will`);
+      log(`  use the existing names — make sure that's what you want.\n`);
     } else {
-      applySlug(DEFAULT_SLUG, proposedSlug);
+      applySlug(existingSlug, proposedSlug);
       slug = proposedSlug;
-      log(`  ✓ Substituted "${DEFAULT_SLUG}" → "${slug}" in wrangler.jsonc, agent.ts\n`);
+      log(`  ✓ Substituted "${existingSlug}" → "${slug}" in wrangler.jsonc, agent.ts\n`);
     }
   }
 
